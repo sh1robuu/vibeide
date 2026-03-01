@@ -333,17 +333,7 @@ export function AgentPanel() {
                 </div>
               ))}
 
-              {isGenerating && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
-                    <Code2 size={16} />
-                  </div>
-                  <div className="px-4 py-3 rounded-2xl bg-white/5 border border-white/10 rounded-tl-sm flex items-center gap-2">
-                    <Loader2 size={14} className="animate-spin text-emerald-400" />
-                    <span className="text-sm text-white/60">Generating code...</span>
-                  </div>
-                </div>
-              )}
+
               <div ref={chatEndRef} />
             </motion.div>
           )}
