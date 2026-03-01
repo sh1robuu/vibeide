@@ -42,13 +42,14 @@ const ai = new GoogleGenAI({ apiKey });
 const getModelName = (displayName: string): string => {
   switch (displayName) {
     case 'Gemini 3 Flash': return 'gemini-3-flash-preview';
-    case 'Qwen 3 Coder': return 'qwen3-coder-next';
+    case 'Qwen 3 Coder': return 'qwen3-coder-next:cloud';
+    case 'GPT-OSS 120B': return 'gpt-oss:120b-cloud';
     default: return 'gemini-3-flash-preview';
   }
 };
 
 const isOllamaModel = (modelId: string): boolean => {
-  return ['qwen3-coder-next'].includes(modelId);
+  return ['qwen3-coder-next', 'gpt-oss:120b-cloud'].includes(modelId);
 };
 
 const callOllamaAPI = async (

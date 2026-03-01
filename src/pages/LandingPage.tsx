@@ -20,6 +20,7 @@ export function LandingPage() {
   const models = [
     { id: 'Gemini 3 Flash', isNew: true, provider: 'Google' },
     { id: 'Qwen 3 Coder', isNew: true, provider: 'Ollama' },
+    { id: 'GPT-OSS 120B', isNew: true, provider: 'Ollama' },
   ];
 
   useEffect(() => {
