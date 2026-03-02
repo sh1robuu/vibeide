@@ -22,12 +22,15 @@ export function MainLayout({ children }: MainLayoutProps) {
     setSettingsOpen,
     isBottomPanelOpen, setBottomPanelOpen,
     bottomPanelTab, setBottomPanelTab,
-    files, folders
+    files, folders,
+    projectName, setProjectName
   } = useStore();
   const t = translations[language].ide;
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isRenamingProject, setIsRenamingProject] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
   const profileRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -141,7 +144,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-[13px] text-white/50 px-4">
-            My Awesome Project - VibeCraft
+            {projectName} - VibeCraft
           </div>
           <button
             onClick={toggleLanguage}
@@ -263,10 +266,35 @@ export function MainLayout({ children }: MainLayoutProps) {
           <header className="flex items-center justify-between h-12 rounded-2xl bg-white/5 border border-white/10 px-4 backdrop-blur-md shrink-0">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3 pr-4">
-                <h1 className="font-semibold tracking-tight text-white/90">My Awesome Project</h1>
-                <span className="px-2 py-0.5 rounded-full bg-white/10 text-[10px] uppercase tracking-wider text-white/60 font-medium">
-                  {mode} {t.header.mode}
-                </span>
+                {isRenamingProject ? (
+                  <input
+                    autoFocus
+                    type="text"
+                    value={renameValue}
+                    onChange={e => setRenameValue(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && renameValue.trim()) {
+                        setProjectName(renameValue.trim());
+                        setIsRenamingProject(false);
+                      } else if (e.key === 'Escape') {
+                        setIsRenamingProject(false);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (renameValue.trim()) setProjectName(renameValue.trim());
+                      setIsRenamingProject(false);
+                    }}
+                    className="font-semibold tracking-tight text-white/90 bg-transparent border-b border-indigo-500/50 outline-none px-1 py-0.5 text-sm w-48"
+                  />
+                ) : (
+                  <h1
+                    className="font-semibold tracking-tight text-white/90 cursor-pointer hover:text-indigo-300 transition-colors"
+                    onClick={() => { setRenameValue(projectName); setIsRenamingProject(true); }}
+                    title={language === 'vi' ? 'Bấm để đổi tên' : 'Click to rename'}
+                  >
+                    {projectName}
+                  </h1>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-3">

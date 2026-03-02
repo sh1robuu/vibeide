@@ -50,6 +50,9 @@ interface AppState {
   mode: ProjectMode;
   setMode: (mode: ProjectMode) => void;
 
+  projectName: string;
+  setProjectName: (name: string) => void;
+
   code: string;
   setCode: (code: string) => void;
 
@@ -134,6 +137,9 @@ export const useStore = create<AppState>((set) => ({
 
   mode: 'advanced',
   setMode: (mode) => set({ mode }),
+
+  projectName: localStorage.getItem('vibecraft_project_name') || 'My Project',
+  setProjectName: (projectName) => { localStorage.setItem('vibecraft_project_name', projectName); set({ projectName }); },
 
   code: defaultFiles['index.html'],
   setCode: (code) => set({ code }),

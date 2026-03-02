@@ -59,6 +59,7 @@ const callOllamaAPI = async (
 ): Promise<string> => {
   const ollamaKey = import.meta.env.VITE_OLLAMA_API_KEY || '';
 
+  // Always use streaming to avoid Ollama cloud timeout on large models
   const response = await fetch('/api/ollama', {
     method: 'POST',
     headers: {
@@ -72,7 +73,7 @@ const callOllamaAPI = async (
         { role: 'user', content: userMessage }
       ],
       temperature: 0.7,
-      stream: false
+      stream: true
     })
   });
 
@@ -83,8 +84,29 @@ const callOllamaAPI = async (
     );
   }
 
-  const data = await response.json();
-  return data.message?.content || '';
+  // Accumulate streamed NDJSON chunks into full response
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let accumulated = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split('\n').filter(l => l.trim());
+    for (const line of lines) {
+      try {
+        const json = JSON.parse(line);
+        accumulated += json.message?.content || '';
+      } catch {
+        // skip non-JSON lines
+      }
+    }
+  }
+
+  return accumulated;
 };
 
 const callGeminiAPI = async (

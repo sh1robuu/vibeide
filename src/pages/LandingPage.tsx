@@ -55,10 +55,12 @@ export function LandingPage() {
     setPendingPrompt(prompt);
     setPendingModel(selectedModel);
 
+    const hasOnboarded = localStorage.getItem('vibecraft_onboarding');
+
     if (isAuthenticated) {
-      navigate('/editor');
+      navigate(hasOnboarded ? '/editor' : '/onboarding');
     } else {
-      navigate('/auth?mode=signup&redirect=editor');
+      navigate(`/auth?mode=signup&redirect=${hasOnboarded ? 'editor' : 'onboarding'}`);
     }
   };
 
