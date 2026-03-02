@@ -49,7 +49,7 @@ const getModelName = (displayName: string): string => {
 };
 
 const isOllamaModel = (modelId: string): boolean => {
-  return ['qwen3-coder-next', 'gpt-oss:120b-cloud'].includes(modelId);
+  return ['qwen3-coder-next:cloud', 'gpt-oss:120b-cloud'].includes(modelId);
 };
 
 const callOllamaAPI = async (
@@ -58,9 +58,8 @@ const callOllamaAPI = async (
   userMessage: string
 ): Promise<string> => {
   const ollamaKey = import.meta.env.VITE_OLLAMA_API_KEY || '';
-  const ollamaBaseUrl = import.meta.env.VITE_OLLAMA_BASE_URL || 'https://ollama.com/api/v1';
 
-  const response = await fetch(`${ollamaBaseUrl}/chat/completions`, {
+  const response = await fetch('/api/ollama', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -72,7 +71,8 @@ const callOllamaAPI = async (
         { role: 'system', content: systemInstruction },
         { role: 'user', content: userMessage }
       ],
-      temperature: 0.7
+      temperature: 0.7,
+      stream: false
     })
   });
 
@@ -84,7 +84,7 @@ const callOllamaAPI = async (
   }
 
   const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  return data.message?.content || '';
 };
 
 const callGeminiAPI = async (
@@ -145,9 +145,8 @@ async function* streamOllamaAPI(
   userMessage: string
 ): AsyncGenerator<string> {
   const ollamaKey = import.meta.env.VITE_OLLAMA_API_KEY || '';
-  const ollamaBaseUrl = import.meta.env.VITE_OLLAMA_BASE_URL || 'https://ollama.com/api/v1';
 
-  const response = await fetch(`${ollamaBaseUrl}/chat/completions`, {
+  const response = await fetch('/api/ollama', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -187,15 +186,13 @@ async function* streamOllamaAPI(
 
     for (const line of lines) {
       const trimmed = line.trim();
-      if (!trimmed || trimmed === 'data: [DONE]') continue;
-      if (trimmed.startsWith('data: ')) {
-        try {
-          const json = JSON.parse(trimmed.slice(6));
-          const content = json.choices?.[0]?.delta?.content;
-          if (content) yield content;
-        } catch {
-          // Skip malformed chunks
-        }
+      if (!trimmed) continue;
+      try {
+        const json = JSON.parse(trimmed);
+        const content = json.message?.content;
+        if (content) yield content;
+      } catch {
+        // Skip malformed chunks
       }
     }
   }
