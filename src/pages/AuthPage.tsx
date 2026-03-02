@@ -65,25 +65,74 @@ export function AuthPage() {
       }
 
       const searchParams = new URLSearchParams(location.search);
-      const redirect = searchParams.get('redirect') || 'editor';
-      navigate(`/${redirect}`);
+      const redirect = searchParams.get('redirect');
+
+      if (redirect) {
+        // Explicit redirect from LandingPage "Try Now"
+        navigate(`/${redirect}`);
+      } else if (!isLogin && !localStorage.getItem('vibecraft_onboarding')) {
+        // New signup without onboarding — send to walkthrough
+        navigate('/onboarding');
+      } else {
+        navigate('/editor');
+      }
     } catch (err: any) {
       console.error(err);
 
-      let errorMessage = language === 'en' ? 'Authentication failed.' : 'Xác thực thất bại.';
+      const code = err.code || '';
+      let errorMessage: string;
 
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        errorMessage = language === 'en'
-          ? 'This email is not linked to any account. Please sign up.'
-          : 'Email này chưa liên kết với tài khoản nào, vui lòng đăng ký.';
-      } else if (err.code === 'auth/wrong-password') {
-        errorMessage = language === 'en'
-          ? 'Incorrect password.'
-          : 'Sai mật khẩu.';
-      } else if (err.code === 'auth/email-already-in-use') {
-        errorMessage = language === 'en'
-          ? 'This email is already registered. Please log in.'
-          : 'Email này đã được đăng ký. Vui lòng đăng nhập.';
+      switch (code) {
+        case 'auth/weak-password':
+          errorMessage = language === 'en'
+            ? 'Password is too weak. It must be at least 6 characters.'
+            : 'Mật khẩu quá yếu. Mật khẩu phải có ít nhất 6 ký tự.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = language === 'en'
+            ? 'Invalid email address format.'
+            : 'Định dạng email không hợp lệ.';
+          break;
+        case 'auth/email-already-in-use':
+          errorMessage = language === 'en'
+            ? 'This email is already registered. Please log in instead.'
+            : 'Email này đã được đăng ký. Vui lòng đăng nhập.';
+          break;
+        case 'auth/user-not-found':
+        case 'auth/invalid-credential':
+          errorMessage = language === 'en'
+            ? 'Email or password is incorrect. Please try again or sign up.'
+            : 'Email hoặc mật khẩu không đúng. Vui lòng thử lại hoặc đăng ký.';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = language === 'en'
+            ? 'Incorrect password. Please try again.'
+            : 'Sai mật khẩu. Vui lòng thử lại.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = language === 'en'
+            ? 'Too many failed attempts. Please try again later.'
+            : 'Quá nhiều lần thử. Vui lòng thử lại sau.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = language === 'en'
+            ? 'Network error. Please check your internet connection.'
+            : 'Lỗi mạng. Vui lòng kiểm tra kết nối internet.';
+          break;
+        case 'auth/user-disabled':
+          errorMessage = language === 'en'
+            ? 'This account has been disabled. Contact support for help.'
+            : 'Tài khoản này đã bị vô hiệu hóa. Liên hệ hỗ trợ để được giúp đỡ.';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = language === 'en'
+            ? 'This sign-in method is not enabled. Contact support.'
+            : 'Phương thức đăng nhập này chưa được kích hoạt.';
+          break;
+        default:
+          errorMessage = language === 'en'
+            ? `Authentication failed: ${err.message || 'Unknown error'}`
+            : `Xác thực thất bại: ${err.message || 'Lỗi không xác định'}`;
       }
 
       setError(errorMessage);

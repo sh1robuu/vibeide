@@ -18,7 +18,7 @@ type ChatMessage = {
 };
 
 export function AgentPanel() {
-  const { activeTab, setActiveTab, files, language, pendingPrompt, pendingModel, setPendingPrompt, setPendingModel, pendingFileChanges, setPendingFileChanges, applyPendingChanges } = useStore();
+  const { activeTab, setActiveTab, files, language, user, pendingPrompt, pendingModel, setPendingPrompt, setPendingModel, pendingFileChanges, setPendingFileChanges, applyPendingChanges } = useStore();
   const t = translations[language].ide.agent;
   const [prompt, setPrompt] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -33,12 +33,12 @@ export function AgentPanel() {
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [mentorModel, setMentorModel] = useState('Gemini 3 Flash');
 
-  const CHAT_STORAGE_KEY = 'vibebot-chat-history';
+  const getChatKey = () => `vibebot-chat-history-${user?.uid || 'guest'}`;
 
-  // Load chat from localStorage
+  // Load chat from localStorage (scoped per user)
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>(() => {
     try {
-      const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+      const saved = localStorage.getItem(`vibebot-chat-history-${user?.uid || 'guest'}`);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -52,16 +52,25 @@ export function AgentPanel() {
   const modelRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Save chat to localStorage whenever it changes
+  // Reload chat when user changes (login/logout/switch)
   useEffect(() => {
     try {
-      // Don't save streaming state - filter out in-progress messages
+      const saved = localStorage.getItem(getChatKey());
+      setChatHistory(saved ? JSON.parse(saved) : []);
+    } catch {
+      setChatHistory([]);
+    }
+  }, [user?.uid]);
+
+  // Save chat to localStorage whenever it changes (scoped per user)
+  useEffect(() => {
+    try {
       const toSave = chatHistory.filter(m => m.id !== streamingMessageId);
-      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
+      localStorage.setItem(getChatKey(), JSON.stringify(toSave));
     } catch {
       // Ignore storage errors
     }
-  }, [chatHistory, streamingMessageId]);
+  }, [chatHistory, streamingMessageId, user?.uid]);
 
   useEffect(() => {
     if (pendingPrompt) {
@@ -169,7 +178,7 @@ export function AgentPanel() {
   const clearChat = () => {
     setChatHistory([]);
     setPendingFileChanges(null);
-    localStorage.removeItem(CHAT_STORAGE_KEY);
+    localStorage.removeItem(getChatKey());
   };
 
   const handleGenerate = () => {
