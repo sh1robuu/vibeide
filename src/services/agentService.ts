@@ -364,36 +364,62 @@ User says "xóa file styles.css":
 IMPORTANT: Do NOT wrap the JSON in markdown code fences. Return ONLY the raw JSON object.`;
 
 export const agentService = {
-  evaluatePrompt: async (prompt: string, lang: string = 'en'): Promise<PromptEvaluation> => {
+  evaluatePrompt: async (prompt: string, lang: string = 'en', modelName: string = 'Gemini 3 Flash'): Promise<PromptEvaluation> => {
     const isVi = lang === 'vi';
+    const actualModel = getModelName(modelName);
+
     const systemPrompt = isVi
-      ? `Bạn là một Prompt Mentor giúp học sinh viết prompt tốt hơn.
-Phân tích prompt của user và trả về JSON (KHÔNG wrap trong code block):
+      ? `Bạn là một chuyên gia hàng đầu về Prompt Engineering cho lĩnh vực lập trình (coding).
+Nhiệm vụ: Phân tích prompt coding của user và đưa ra đánh giá chuyên sâu.
+
+Tiêu chí đánh giá (mỗi mục 1-10):
+- **clarity** (Rõ ràng): Prompt có diễn đạt rõ mục tiêu coding không? Có mơ hồ hay gây hiểu nhầm không?
+- **specificity** (Cụ thể): Có nêu rõ công nghệ (HTML/CSS/JS), framework, thư viện cần dùng không? Có mô tả chi tiết giao diện, chức năng, hành vi không?
+- **structure** (Cấu trúc): Prompt có được tổ chức logic không? Có chia nhỏ yêu cầu thành các bước/phần rõ ràng không?
+
+Quy tắc:
+- CHỈ đánh giá prompt liên quan đến coding/lập trình. Nếu prompt không liên quan đến coding, nhẹ nhàng nhắc user rằng Mentor chỉ hỗ trợ prompt coding.
+- Đề xuất improvedPrompt phải giữ nguyên ý tưởng gốc nhưng thêm chi tiết kỹ thuật: màu sắc cụ thể (hex), font chữ, responsive, animation, cấu trúc file, v.v.
+- Liệt kê weaknesses cụ thể và cách khắc phục.
+- Phản hồi bằng tiếng Việt, thân thiện, dùng emoji.
+
+Trả về JSON thuần (KHÔNG wrap trong code block):
 {
   "score": <1-10>,
   "clarity": <1-10>,
   "specificity": <1-10>,
   "structure": <1-10>,
-  "feedback": "<nhận xét chi tiết bằng tiếng Việt>",
-  "improvedPrompt": "<phiên bản prompt đã cải thiện>",
+  "feedback": "<nhận xét chi tiết>",
+  "improvedPrompt": "<prompt đã cải thiện với chi tiết kỹ thuật>",
   "weaknesses": ["<điểm yếu 1>", "<điểm yếu 2>"]
-}
-Hãy thân thiện, dùng emoji, phản hồi bằng tiếng Việt.`
-      : `You are a Prompt Mentor helping students write better prompts.
-Analyze the user's prompt and return JSON (do NOT wrap in code block):
+}`
+      : `You are a world-class Prompt Engineering expert specializing in coding and software development prompts.
+Your mission: Analyze the user's coding prompt and provide expert-level feedback.
+
+Evaluation criteria (each 1-10):
+- **clarity**: Is the coding goal clearly stated? Any ambiguity or room for misinterpretation?
+- **specificity**: Does it specify technologies (HTML/CSS/JS), frameworks, libraries? Does it describe UI details, functionality, behavior?
+- **structure**: Is the prompt organized logically? Are requirements broken down into clear steps/sections?
+
+Rules:
+- ONLY evaluate coding/programming related prompts. If the prompt is not about coding, gently remind the user that Mentor only supports coding prompts.
+- The improvedPrompt must preserve the original idea but add technical details: specific colors (hex codes), fonts, responsive design, animations, file structure, etc.
+- List concrete weaknesses with actionable fixes.
+- Be friendly and encouraging, use emoji.
+
+Return pure JSON (do NOT wrap in code block):
 {
   "score": <1-10>,
   "clarity": <1-10>,
   "specificity": <1-10>,
   "structure": <1-10>,
-  "feedback": "<detailed feedback>",
-  "improvedPrompt": "<improved version of the prompt>",
+  "feedback": "<detailed expert feedback>",
+  "improvedPrompt": "<improved prompt with technical details>",
   "weaknesses": ["<weakness 1>", "<weakness 2>"]
-}
-Be friendly, use emoji, respond in English.`;
+}`;
 
     try {
-      const raw = await callAI('gemini-3-flash-preview', systemPrompt, `Evaluate this prompt: "${prompt}"`);
+      const raw = await callAI(actualModel, systemPrompt, `Evaluate this coding prompt: "${prompt}"`);
       const cleaned = raw.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim();
       const parsed = JSON.parse(cleaned);
       return {

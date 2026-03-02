@@ -31,6 +31,7 @@ export function AgentPanel() {
   const [selectedModel, setSelectedModel] = useState('Gemini 3 Flash');
   const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [mentorModel, setMentorModel] = useState('Gemini 3 Flash');
 
   const CHAT_STORAGE_KEY = 'vibebot-chat-history';
 
@@ -102,7 +103,7 @@ export function AgentPanel() {
     if (!prompt.trim()) return;
     setIsEvaluating(true);
     setEvaluation(null);
-    const result = await agentService.evaluatePrompt(prompt, language);
+    const result = await agentService.evaluatePrompt(prompt, language, mentorModel);
     setEvaluation(result);
     setIsEvaluating(false);
   };
@@ -362,8 +363,29 @@ export function AgentPanel() {
             >
               <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-4 text-sm text-emerald-200/80">
                 {language === 'vi'
-                  ? 'Xin chào! Tôi là Prompt Mentor của bạn. Viết prompt bên dưới và bấm "Evaluate" để nhận đánh giá và gợi ý cải thiện nhé! 🚀'
-                  : 'Hi! I\'m your Prompt Mentor! Write a prompt below and click "Evaluate" to see how you can improve it before generating code.'}
+                  ? 'Xin chào! Tôi là chuyên gia Prompt Engineering cho coding. Viết prompt bên dưới để được đánh giá và cải thiện chất lượng prompt coding của bạn! 🚀'
+                  : 'Hi! I\'m your Coding Prompt Expert! Write a coding prompt below and I\'ll help you improve it with technical details and best practices.'}
+              </div>
+
+              {/* Mentor Model Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-white/40">{language === 'vi' ? 'Model:' : 'Model:'}</span>
+                <div className="flex rounded-lg border border-white/10 overflow-hidden">
+                  {['Gemini 3 Flash', 'GPT-OSS 120B'].map(m => (
+                    <button
+                      key={m}
+                      onClick={() => setMentorModel(m)}
+                      className={cn(
+                        "px-3 py-1 text-xs transition-colors",
+                        mentorModel === m
+                          ? "bg-emerald-500/20 text-emerald-300 font-medium"
+                          : "text-white/50 hover:text-white hover:bg-white/5"
+                      )}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {isEvaluating ? (
@@ -371,7 +393,13 @@ export function AgentPanel() {
                   <Loader2 className="animate-spin" size={24} />
                 </div>
               ) : evaluation ? (
-                <PromptEvaluationCard evaluation={evaluation} />
+                <PromptEvaluationCard
+                  evaluation={evaluation}
+                  onUseImproved={(improved) => {
+                    setPrompt(improved);
+                    setActiveTab('code');
+                  }}
+                />
               ) : null}
             </motion.div>
           )}
