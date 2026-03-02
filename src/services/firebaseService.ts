@@ -1,8 +1,8 @@
-import { 
-  signInWithPopup, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut, 
+import {
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
@@ -72,7 +72,7 @@ export const logout = async () => {
 export const updateUserProfile = async (name: string, photoURL?: string) => {
   try {
     if (auth.currentUser) {
-      await updateProfile(auth.currentUser, { 
+      await updateProfile(auth.currentUser, {
         displayName: name,
         ...(photoURL ? { photoURL } : {})
       });
@@ -88,18 +88,25 @@ export const updateUserProfile = async (name: string, photoURL?: string) => {
 // --- Database (Workspace Sync) ---
 
 export const saveWorkspace = async (userId: string, files: Record<string, string>, folders: string[]) => {
+  const workspaceData = {
+    files,
+    folders,
+    lastUpdated: new Date().toISOString()
+  };
+
   try {
     const userDocRef = doc(db, 'users', userId);
-    await setDoc(userDocRef, {
-      workspace: {
-        files,
-        folders,
-        lastUpdated: new Date().toISOString()
-      }
-    }, { merge: true });
-  } catch (error) {
-    console.error("Error saving workspace", error);
-    throw error; // Throw to handle in UI
+    await setDoc(userDocRef, { workspace: workspaceData }, { merge: true });
+  } catch (error: any) {
+    console.warn("Firebase save failed, using localStorage fallback:", error.message);
+    // Fallback: save to localStorage
+    try {
+      localStorage.setItem(`workspace_${userId}`, JSON.stringify(workspaceData));
+    } catch (localError) {
+      console.error("localStorage save also failed:", localError);
+      throw error; // Re-throw the original Firebase error
+    }
+    // Don't throw — saved successfully to localStorage
   }
 };
 
@@ -107,16 +114,23 @@ export const loadWorkspace = async (userId: string) => {
   try {
     const userDocRef = doc(db, 'users', userId);
     const docSnap = await getDoc(userDocRef);
-    
+
     if (docSnap.exists()) {
       const data = docSnap.data();
-      return data.workspace || null;
+      if (data.workspace) return data.workspace;
     }
-    return null;
   } catch (error) {
-    console.error("Error loading workspace", error);
-    return null;
+    console.warn("Firebase load failed, trying localStorage:", error);
   }
+
+  // Fallback: load from localStorage
+  try {
+    const localData = localStorage.getItem(`workspace_${userId}`);
+    if (localData) return JSON.parse(localData);
+  } catch (e) {
+    console.error("localStorage load also failed:", e);
+  }
+  return null;
 };
 
 // --- Feedback ---
@@ -141,7 +155,7 @@ export const submitFeedback = async (userId: string | undefined, name: string, e
 export const initFirebaseAuth = () => {
   return onAuthStateChanged(auth, async (user) => {
     const store = useStore.getState();
-    
+
     if (user) {
       store.setIsAuthenticated(true);
       store.setUser({

@@ -14,7 +14,7 @@ export interface IdeaSuggestion {
   id: string;
   title: string;
   description: string;
-  type: 'feature' | 'ui' | 'gamification';
+  type: 'feature' | 'ui' | 'gamification' | 'animation';
 }
 
 /**
@@ -364,33 +364,56 @@ User says "xóa file styles.css":
 IMPORTANT: Do NOT wrap the JSON in markdown code fences. Return ONLY the raw JSON object.`;
 
 export const agentService = {
-  evaluatePrompt: async (prompt: string): Promise<PromptEvaluation> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const length = prompt.length;
-        if (length < 20) {
-          resolve({
-            score: 4,
-            clarity: 5,
-            specificity: 3,
-            structure: 4,
-            feedback: "Your prompt is a bit too short! To get exactly what you want, try adding more details about colors, layout, and what the user should do.",
-            improvedPrompt: `Create a ${prompt || 'webpage'} with a modern, dark-themed UI. Include a centered title, a glowing button, and a responsive layout using Flexbox.`,
-            weaknesses: ["Missing visual details", "No layout instructions", "Too vague"],
-          });
-        } else {
-          resolve({
-            score: 8,
-            clarity: 9,
-            specificity: 7,
-            structure: 8,
-            feedback: "Great prompt! You gave clear instructions. To make it a 10/10, try specifying the exact colors or fonts you want to use.",
-            improvedPrompt: prompt + " Use a neon green accent color (#00FF00) and the 'Inter' font for a futuristic vibe.",
-            weaknesses: ["Could use exact color hex codes"],
-          });
-        }
-      }, 1500);
-    });
+  evaluatePrompt: async (prompt: string, lang: string = 'en'): Promise<PromptEvaluation> => {
+    const isVi = lang === 'vi';
+    const systemPrompt = isVi
+      ? `Bạn là một Prompt Mentor giúp học sinh viết prompt tốt hơn.
+Phân tích prompt của user và trả về JSON (KHÔNG wrap trong code block):
+{
+  "score": <1-10>,
+  "clarity": <1-10>,
+  "specificity": <1-10>,
+  "structure": <1-10>,
+  "feedback": "<nhận xét chi tiết bằng tiếng Việt>",
+  "improvedPrompt": "<phiên bản prompt đã cải thiện>",
+  "weaknesses": ["<điểm yếu 1>", "<điểm yếu 2>"]
+}
+Hãy thân thiện, dùng emoji, phản hồi bằng tiếng Việt.`
+      : `You are a Prompt Mentor helping students write better prompts.
+Analyze the user's prompt and return JSON (do NOT wrap in code block):
+{
+  "score": <1-10>,
+  "clarity": <1-10>,
+  "specificity": <1-10>,
+  "structure": <1-10>,
+  "feedback": "<detailed feedback>",
+  "improvedPrompt": "<improved version of the prompt>",
+  "weaknesses": ["<weakness 1>", "<weakness 2>"]
+}
+Be friendly, use emoji, respond in English.`;
+
+    try {
+      const raw = await callAI('gemini-3-flash-preview', systemPrompt, `Evaluate this prompt: "${prompt}"`);
+      const cleaned = raw.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      return {
+        score: parsed.score || 5,
+        clarity: parsed.clarity || 5,
+        specificity: parsed.specificity || 5,
+        structure: parsed.structure || 5,
+        feedback: parsed.feedback || (isVi ? 'Không thể phân tích prompt.' : 'Could not analyze prompt.'),
+        improvedPrompt: parsed.improvedPrompt || prompt,
+        weaknesses: parsed.weaknesses || [],
+      };
+    } catch (error) {
+      console.error('[evaluatePrompt] Error:', error);
+      return {
+        score: 5, clarity: 5, specificity: 5, structure: 5,
+        feedback: isVi ? '⚠️ Không thể kết nối AI để đánh giá. Hãy thử lại sau.' : '⚠️ Could not connect to AI for evaluation. Please try again.',
+        improvedPrompt: prompt,
+        weaknesses: [isVi ? 'Lỗi kết nối' : 'Connection error'],
+      };
+    }
   },
 
   /**
@@ -497,30 +520,37 @@ export const agentService = {
     }
   },
 
-  generateIdeas: async (): Promise<IdeaSuggestion[]> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            id: '1',
-            title: 'Add a Dark Mode Toggle',
-            description: 'Let users switch between a bright neon theme and a sleek dark mode.',
-            type: 'ui',
-          },
-          {
-            id: '2',
-            title: 'Confetti on Click',
-            description: 'Make it rain confetti when the user clicks the main button! 🎉',
-            type: 'gamification',
-          },
-          {
-            id: '3',
-            title: 'User Profile Card',
-            description: 'Add a floating card showing a user avatar and their current level.',
-            type: 'feature',
-          },
-        ]);
-      }, 1000);
-    });
+  generateIdeas: async (files: Record<string, string>, lang: string = 'en'): Promise<IdeaSuggestion[]> => {
+    const isVi = lang === 'vi';
+    const fileNames = Object.keys(files);
+    const fileSummary = fileNames.length > 0
+      ? fileNames.map(f => `- ${f}`).join('\n')
+      : '(Empty project)';
+
+    const systemPrompt = isVi
+      ? `Bạn là một trợ lý sáng tạo giúp học sinh cải thiện dự án web.
+Dựa trên các file hiện tại trong project, đề xuất 3-4 ý tưởng cụ thể, thực tế.
+Trả về JSON (KHÔNG wrap trong code block):
+[{"id":"1","title":"<tiêu đề>","description":"<mô tả chi tiết>","type":"<ui|feature|gamification|animation>"},...]
+Phản hồi bằng tiếng Việt, thân thiện, dùng emoji.`
+      : `You are a creative assistant helping students improve their web project.
+Based on the current project files, suggest 3-4 specific, actionable ideas.
+Return JSON (do NOT wrap in code block):
+[{"id":"1","title":"<title>","description":"<detailed description>","type":"<ui|feature|gamification|animation>"},...]
+Be friendly, use emoji, respond in English.`;
+
+    try {
+      const raw = await callAI('gemini-3-flash-preview', systemPrompt, `My project has these files:\n${fileSummary}\n\nSuggest improvements!`);
+      const cleaned = raw.replace(/```(?:json)?\s*/g, '').replace(/```\s*/g, '').trim();
+      const parsed = JSON.parse(cleaned);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.error('[generateIdeas] Error:', error);
+      return [
+        { id: '1', title: isVi ? '🎨 Thêm hiệu ứng hover' : '🎨 Add hover effects', description: isVi ? 'Làm các nút và thẻ sáng lên khi di chuột qua' : 'Make buttons and cards glow on hover', type: 'ui' },
+        { id: '2', title: isVi ? '🌙 Chế độ tối' : '🌙 Dark mode toggle', description: isVi ? 'Cho người dùng chuyển giữa giao diện sáng và tối' : 'Let users switch between light and dark themes', type: 'feature' },
+        { id: '3', title: isVi ? '✨ Animation loading' : '✨ Loading animation', description: isVi ? 'Thêm hiệu ứng tải trang mượt mà' : 'Add smooth page loading transitions', type: 'animation' },
+      ];
+    }
   }
 };

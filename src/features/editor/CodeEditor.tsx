@@ -8,7 +8,7 @@ import { translations } from '../../i18n/translations';
 import type { editor } from 'monaco-editor';
 
 export function CodeEditor() {
-  const { openFiles, setOpenFiles, activeFile, setActiveFile, language, settings, files, updateFile, setMarkers } = useStore();
+  const { openFiles, setOpenFiles, activeFile, setActiveFile, language, settings, files, updateFile, setMarkers, pendingFileChanges } = useStore();
   const t = translations[language].ide.editor;
   const monaco = useMonaco();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -85,6 +85,84 @@ export function CodeEditor() {
     }
   };
 
+  // Get file content: from files first, then from pendingFileChanges for new files
+  const getFileContent = (fileName: string): string => {
+    if (files[fileName] !== undefined) return files[fileName];
+    if (pendingFileChanges) {
+      const pending = pendingFileChanges.find(c => c.path === fileName);
+      if (pending?.content) return pending.content;
+    }
+    return '';
+  };
+
+  const isReadOnly = (fileName: string): boolean => {
+    return !files[fileName] && !!pendingFileChanges?.find(c => c.path === fileName);
+  };
+
+  // Diff highlighting: show green/red line decorations for pending changes
+  useEffect(() => {
+    if (!editorRef.current || !monaco || !activeFile || activeFile === 'Preview') return;
+
+    const editor = editorRef.current;
+    const pendingChange = pendingFileChanges?.find(c => c.path === activeFile);
+
+    if (!pendingChange || !pendingChange.content) {
+      // Clear decorations
+      editor.createDecorationsCollection([]);
+      return;
+    }
+
+    const currentContent = files[activeFile] || '';
+    const newContent = pendingChange.content;
+
+    // For new files, highlight all lines green
+    if (pendingChange.action === 'create') {
+      const lineCount = newContent.split('\n').length;
+      const decorations = [];
+      for (let i = 1; i <= lineCount; i++) {
+        decorations.push({
+          range: new monaco.Range(i, 1, i, 1),
+          options: {
+            isWholeLine: true,
+            linesDecorationsClassName: 'diff-added-gutter',
+            className: 'diff-added-line',
+          }
+        });
+      }
+      editor.createDecorationsCollection(decorations);
+      return;
+    }
+
+    // For modified files, compute diff and highlight
+    if (pendingChange.action === 'modify') {
+      const oldLines = currentContent.split('\n');
+      const newLines = newContent.split('\n');
+      const decorations: any[] = [];
+
+      // Simple line-by-line comparison for highlighting
+      const maxLines = Math.max(oldLines.length, newLines.length);
+      for (let i = 0; i < maxLines; i++) {
+        const lineNum = i + 1;
+        if (i >= oldLines.length) {
+          // New line added
+          decorations.push({
+            range: new monaco.Range(lineNum, 1, lineNum, 1),
+            options: { isWholeLine: true, linesDecorationsClassName: 'diff-added-gutter', className: 'diff-added-line' }
+          });
+        } else if (i >= newLines.length) {
+          // Line removed (can't show in editor since line doesn't exist in new content)
+        } else if (oldLines[i] !== newLines[i]) {
+          // Line changed
+          decorations.push({
+            range: new monaco.Range(lineNum, 1, lineNum, 1),
+            options: { isWholeLine: true, linesDecorationsClassName: 'diff-modified-gutter', className: 'diff-modified-line' }
+          });
+        }
+      }
+      editor.createDecorationsCollection(decorations);
+    }
+  }, [pendingFileChanges, activeFile, monaco]);
+
   return (
     <div className="flex-1 flex flex-col h-full w-full rounded-2xl overflow-hidden border border-white/10 bg-[#1e1e1e] shadow-2xl relative">
       {/* Tab Bar */}
@@ -94,7 +172,7 @@ export function CodeEditor() {
           const isPreview = fileName === 'Preview';
           const icon = isPreview ? <Play size={12} className="text-emerald-400" /> : fileName.endsWith('.json') ? '{}' : '≡';
           const iconColor = fileName.endsWith('.json') ? 'text-yellow-400' : 'text-blue-400';
-          
+
           return (
             <div
               key={fileName}
@@ -110,7 +188,7 @@ export function CodeEditor() {
                 <span className={cn("text-xs font-mono", iconColor)}>{icon}</span>
               )}
               <span className="text-xs">{isPreview ? t.preview : fileName}</span>
-              <button 
+              <button
                 onClick={(e) => closeFile(fileName, e)}
                 className={cn(
                   "p-0.5 rounded hover:bg-white/10 transition-colors",
@@ -124,7 +202,7 @@ export function CodeEditor() {
         })}
         <div className="ml-auto px-2 flex items-center gap-2">
           {activeFile && activeFile !== 'Preview' && (
-            <button 
+            <button
               onClick={handleFormat}
               className="flex items-center gap-1.5 px-2 py-1 rounded text-white/50 hover:text-white hover:bg-white/10 transition-colors text-xs font-medium"
               title="Format Document"
@@ -132,7 +210,7 @@ export function CodeEditor() {
               <Wand2 size={12} />
             </button>
           )}
-          <button 
+          <button
             onClick={openPreview}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-xs font-medium"
           >
@@ -141,7 +219,7 @@ export function CodeEditor() {
           </button>
         </div>
       </div>
-      
+
       {/* Editor Area */}
       <div className="flex-1 relative">
         {activeFile === 'Preview' ? (
@@ -151,7 +229,7 @@ export function CodeEditor() {
             height="100%"
             path={activeFile} // Important for Monaco to associate markers with the correct file
             defaultLanguage={activeFile.endsWith('.json') ? 'json' : activeFile.endsWith('.css') ? 'css' : activeFile.endsWith('.html') ? 'html' : 'javascript'}
-            value={files[activeFile] || ''}
+            value={getFileContent(activeFile)}
             theme={settings.theme === 'vs-dark' ? 'vibe-dark' : settings.theme}
             onMount={handleEditorDidMount}
             onChange={handleEditorChange}
@@ -167,6 +245,7 @@ export function CodeEditor() {
               cursorSmoothCaretAnimation: "on",
               formatOnPaste: settings.formatOnSave,
               formatOnType: settings.formatOnSave,
+              readOnly: isReadOnly(activeFile),
             }}
           />
         ) : (

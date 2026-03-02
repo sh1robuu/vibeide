@@ -14,11 +14,11 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { 
-    mode, setMode, 
-    isFileExplorerOpen, setFileExplorerOpen, 
-    user, setIsAuthenticated, setUser, 
-    language, setLanguage, 
+  const {
+    mode, setMode,
+    isFileExplorerOpen, setFileExplorerOpen,
+    user, setIsAuthenticated, setUser,
+    language, setLanguage,
     setSettingsOpen,
     isBottomPanelOpen, setBottomPanelOpen,
     bottomPanelTab, setBottomPanelTab,
@@ -62,15 +62,15 @@ export function MainLayout({ children }: MainLayoutProps) {
     setIsSaving(true);
     try {
       await saveWorkspace(user.uid, files, folders);
-      setToast({ 
-        message: language === 'en' ? 'Workspace saved successfully!' : 'Lưu không gian làm việc thành công!', 
-        type: 'success' 
+      setToast({
+        message: language === 'en' ? 'Workspace saved successfully!' : 'Lưu không gian làm việc thành công!',
+        type: 'success'
       });
     } catch (error: any) {
       console.error("Failed to save workspace", error);
-      setToast({ 
-        message: language === 'en' ? `Failed to save workspace: ${error.message}` : `Lỗi khi lưu: ${error.message}`, 
-        type: 'error' 
+      setToast({
+        message: language === 'en' ? `Failed to save workspace: ${error.message}` : `Lỗi khi lưu: ${error.message}`,
+        type: 'error'
       });
     } finally {
       setIsSaving(false);
@@ -96,7 +96,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#0a0a0a] text-white overflow-hidden font-sans selection:bg-indigo-500/30">
-      
+
       {/* Toast Notification */}
       <div className="fixed top-14 left-1/2 -translate-x-1/2 z-[100]">
         <AnimatePresence>
@@ -108,7 +108,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
               className={cn(
                 "flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-medium min-w-[300px]",
-                toast.type === 'success' 
+                toast.type === 'success'
                   ? "bg-[#1e1e1e] border-emerald-500/30 text-emerald-400 shadow-[0_10px_40px_rgba(16,185,129,0.2)]"
                   : "bg-[#1e1e1e] border-red-500/30 text-red-400 shadow-[0_10px_40px_rgba(239,68,68,0.2)]"
               )}
@@ -120,7 +120,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
               </div>
               <p className="flex-1">{toast.message}</p>
-              <button 
+              <button
                 onClick={() => setToast(null)}
                 className="p-1.5 hover:bg-white/5 rounded-md transition-colors shrink-0"
               >
@@ -143,7 +143,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="text-[13px] text-white/50 px-4">
             My Awesome Project - VibeCraft
           </div>
-          <button 
+          <button
             onClick={toggleLanguage}
             className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white/10 transition-colors text-xs font-medium text-white/70 hover:text-white"
           >
@@ -165,28 +165,28 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Sidebar */}
         <aside className="w-16 flex flex-col items-center py-4 border-r border-white/5 bg-black/40 backdrop-blur-xl z-20 relative">
           <nav className="flex-1 flex flex-col gap-4 w-full px-2">
-            <NavItem 
-              icon={<Layout size={20} />} 
-              label={t.sidebar.files} 
-              active={isFileExplorerOpen} 
-              onClick={() => setFileExplorerOpen(!isFileExplorerOpen)} 
+            <NavItem
+              icon={<Layout size={20} />}
+              label={t.sidebar.files}
+              active={isFileExplorerOpen}
+              onClick={() => setFileExplorerOpen(!isFileExplorerOpen)}
             />
-            <NavItem 
-              icon={<Code2 size={20} />} 
-              label={t.sidebar.editor} 
-              active={!isFileExplorerOpen} 
+            <NavItem
+              icon={<Code2 size={20} />}
+              label={t.sidebar.editor}
+              active={!isFileExplorerOpen}
               onClick={handleEditorClick}
             />
-            <NavItem 
-              icon={<TerminalSquare size={20} />} 
-              label={t.sidebar.console} 
+            <NavItem
+              icon={<TerminalSquare size={20} />}
+              label={t.sidebar.console}
               active={isBottomPanelOpen && bottomPanelTab === 'terminal'}
               onClick={handleTerminalClick}
             />
           </nav>
 
           <div className="mt-auto flex flex-col gap-4 w-full px-2 relative" ref={profileRef}>
-            <button 
+            <button
               onClick={() => setMode(mode === 'beginner' ? 'advanced' : 'beginner')}
               className={cn(
                 "p-3 rounded-xl flex items-center justify-center transition-all group relative",
@@ -196,24 +196,24 @@ export function MainLayout({ children }: MainLayoutProps) {
             >
               <Zap size={20} className={cn(mode === 'beginner' && "animate-pulse")} />
             </button>
-            <NavItem 
-              icon={<Settings size={20} />} 
-              label={t.sidebar.settings} 
+            <NavItem
+              icon={<Settings size={20} />}
+              label={t.sidebar.settings}
               onClick={() => setSettingsOpen(true)}
             />
-            <NavItem 
+            <NavItem
               icon={
                 user?.avatar ? (
                   <img src={user.avatar} alt={user.name} className="w-5 h-5 rounded-full" />
                 ) : (
                   <UserCircle size={20} />
                 )
-              } 
-              label={t.sidebar.profile} 
+              }
+              label={t.sidebar.profile}
               onClick={() => setIsProfileOpen(!isProfileOpen)}
               active={isProfileOpen}
             />
-            
+
             <AnimatePresence>
               {isProfileOpen && (
                 <motion.div
@@ -228,14 +228,14 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <div className="text-xs text-white/50 truncate">{user?.email || 'user@example.com'}</div>
                   </div>
                   <div className="p-1">
-                    <button 
+                    <button
                       onClick={() => navigate('/profile')}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                     >
                       <UserCircle size={16} />
                       {language === 'en' ? 'Edit Profile' : 'Chỉnh sửa hồ sơ'}
                     </button>
-                    <button 
+                    <button
                       onClick={() => navigate('/feedback')}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                     >
@@ -243,7 +243,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                       {language === 'en' ? 'Feedback' : 'Phản hồi'}
                     </button>
                     <div className="h-px w-full bg-white/10 my-1" />
-                    <button 
+                    <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                     >
@@ -271,22 +271,23 @@ export function MainLayout({ children }: MainLayoutProps) {
             </div>
             <div className="flex items-center gap-3">
               {user?.uid && (
-                <button 
+                <button
                   onClick={handleSaveWorkspace}
                   disabled={isSaving}
+                  data-action="save-workspace"
                   className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white/5 text-white/80 text-sm font-medium hover:bg-white/10 transition-colors border border-white/10 disabled:opacity-50"
                 >
                   <Save size={14} className={cn(isSaving && "animate-pulse")} />
                   {isSaving ? "Saving..." : "Save Workspace"}
                 </button>
               )}
-              <button 
+              <button
                 onClick={() => alert('Share link copied to clipboard! (Simulated)')}
                 className="px-4 py-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 text-sm font-medium hover:bg-indigo-500/30 transition-colors border border-indigo-500/30"
               >
                 {t.header.share}
               </button>
-              <button 
+              <button
                 onClick={() => alert('Project published successfully! (Simulated)')}
                 className="px-4 py-1.5 rounded-lg bg-emerald-500 text-black text-sm font-medium hover:bg-emerald-400 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.4)]"
               >
@@ -301,40 +302,24 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </main>
       </div>
-      
+
       {/* Settings Panel */}
       <SettingsPanel />
 
-      {/* Quota Bar */}
+      {/* Status Bar */}
       <div className="h-6 w-full bg-[#121212] border-t border-white/5 flex items-center justify-between px-4 shrink-0 z-[100] text-[10px] text-white/40 font-mono tracking-wider overflow-x-auto custom-scrollbar">
         <div className="flex items-center gap-6 whitespace-nowrap">
           <span className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50"></div>
-            GEMINI 3.1 PRO PREVIEW: <span className="text-white/70">50/50</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50"></div>
-            GEMINI 3 FLASH PREVIEW: <span className="text-white/70">1500/1500</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50"></div>
-            GEMINI 3 PRO PREVIEW: <span className="text-white/70">50/50</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50"></div>
-            GEMINI 2.5 PRO: <span className="text-white/70">50/50</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50"></div>
-            GEMINI 2.5 FLASH: <span className="text-white/70">1500/1500</span>
+            GEMINI 3 FLASH <span className="text-white/30 mx-1">·</span> <span className="text-white/60">Google</span>
           </span>
           <span className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/50"></div>
-            DEEPSEEK V3.2: <span className="text-white/70">UNLIMITED</span>
+            QWEN 3 CODER <span className="text-white/30 mx-1">·</span> <span className="text-white/60">Ollama</span>
           </span>
           <span className="flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/50"></div>
-            QWEN 3 CODER: <span className="text-white/70">UNLIMITED</span>
+            GPT-OSS 120B <span className="text-white/30 mx-1">·</span> <span className="text-white/60">Ollama</span>
           </span>
         </div>
         <div className="flex items-center gap-2 ml-4">
@@ -347,7 +332,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
 function NavItem({ icon, label, active, onClick }: { icon: ReactNode; label: string; active?: boolean; onClick?: () => void }) {
   return (
-    <button 
+    <button
       onClick={onClick}
       className={cn(
         "p-3 rounded-xl flex items-center justify-center transition-all group relative",

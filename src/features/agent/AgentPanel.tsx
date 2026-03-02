@@ -102,7 +102,7 @@ export function AgentPanel() {
     if (!prompt.trim()) return;
     setIsEvaluating(true);
     setEvaluation(null);
-    const result = await agentService.evaluatePrompt(prompt);
+    const result = await agentService.evaluatePrompt(prompt, language);
     setEvaluation(result);
     setIsEvaluating(false);
   };
@@ -205,7 +205,7 @@ export function AgentPanel() {
 
   const loadIdeas = async () => {
     setIsFetchingIdeas(true);
-    const result = await agentService.generateIdeas();
+    const result = await agentService.generateIdeas(files, language);
     setIdeas(result);
     setIsFetchingIdeas(false);
   };
@@ -295,14 +295,27 @@ export function AgentPanel() {
                       {msg.role === 'user' ? <User size={16} /> : <Code2 size={16} />}
                     </div>
                     <div className={cn(
-                      "px-4 py-2.5 rounded-2xl max-w-[85%] text-sm whitespace-pre-wrap",
+                      "px-4 py-2.5 rounded-2xl max-w-[85%] text-sm",
                       msg.role === 'user'
-                        ? "bg-indigo-500/20 text-indigo-100 rounded-tr-sm"
+                        ? "bg-indigo-500/20 text-indigo-100 rounded-tr-sm whitespace-pre-wrap"
                         : msg.isError
-                          ? "bg-red-500/20 text-red-200 border border-red-500/30 rounded-tl-sm"
-                          : "bg-white/5 text-white/80 border border-white/10 rounded-tl-sm"
+                          ? "bg-red-500/20 text-red-200 border border-red-500/30 rounded-tl-sm whitespace-pre-wrap"
+                          : "bg-white/5 text-white/80 border border-white/10 rounded-tl-sm whitespace-pre-wrap"
                     )}>
-                      {msg.content}
+                      {/* Streaming / Thinking indicator */}
+                      {msg.role === 'assistant' && msg.id === streamingMessageId ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-emerald-400">
+                            <Loader2 size={14} className="animate-spin" />
+                            <span className="text-xs font-medium uppercase tracking-wider">Thinking...</span>
+                          </div>
+                          <div className="bg-black/30 rounded-lg p-3 border border-white/5 text-xs text-white/50 max-h-[200px] overflow-y-auto custom-scrollbar font-mono leading-relaxed">
+                            {msg.content || '...'}
+                          </div>
+                        </div>
+                      ) : (
+                        msg.content
+                      )}
                     </div>
                   </div>
 
@@ -348,7 +361,9 @@ export function AgentPanel() {
               className="space-y-4"
             >
               <div className="bg-emerald-900/20 border border-emerald-500/20 rounded-xl p-4 text-sm text-emerald-200/80">
-                I'm your Prompt Mentor! Write a prompt below and click "Evaluate" to see how you can improve it before generating code.
+                {language === 'vi'
+                  ? 'Xin chào! Tôi là Prompt Mentor của bạn. Viết prompt bên dưới và bấm "Evaluate" để nhận đánh giá và gợi ý cải thiện nhé! 🚀'
+                  : 'Hi! I\'m your Prompt Mentor! Write a prompt below and click "Evaluate" to see how you can improve it before generating code.'}
               </div>
 
               {isEvaluating ? (
@@ -370,7 +385,9 @@ export function AgentPanel() {
               className="space-y-4"
             >
               <div className="bg-amber-900/20 border border-amber-500/20 rounded-xl p-4 text-sm text-amber-200/80">
-                Stuck? Here are some cool ideas to add to your project!
+                {language === 'vi'
+                  ? 'Bí ý tưởng? Đây là gợi ý dựa trên project của bạn! 💡'
+                  : 'Stuck? Here are some ideas based on your project! 💡'}
               </div>
 
               {isFetchingIdeas ? (
@@ -394,7 +411,7 @@ export function AgentPanel() {
                     onClick={loadIdeas}
                     className="w-full py-2 rounded-lg border border-white/10 text-white/50 hover:text-white hover:bg-white/5 transition-colors text-sm"
                   >
-                    Generate More Ideas
+                    {language === 'vi' ? 'Tạo thêm ý tưởng' : 'Generate More Ideas'}
                   </button>
                 </div>
               )}

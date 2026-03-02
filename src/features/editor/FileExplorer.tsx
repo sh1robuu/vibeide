@@ -9,11 +9,11 @@ interface FileNode {
   type: 'file' | 'folder';
   icon?: string;
   children?: FileNode[];
-  gitStatus?: 'M' | 'A' | 'U' | null;
+  gitStatus?: 'M' | 'A' | 'U' | 'D' | null;
 }
 
 export function FileExplorer() {
-  const { activeFile, setActiveFile, openFiles, setOpenFiles, language, files, updateFile, deleteFile, markers, folders, addFolder } = useStore();
+  const { activeFile, setActiveFile, openFiles, setOpenFiles, language, files, updateFile, deleteFile, markers, folders, addFolder, pendingFileChanges, setFileExplorerOpen } = useStore();
   const t = translations[language].ide.fileExplorer;
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState('');
@@ -23,11 +23,18 @@ export function FileExplorer() {
   const [newFolderName, setNewFolderName] = useState('');
   const newFolderInputRef = useRef<HTMLInputElement>(null);
 
-  // Mock git status for demonstration
-  const getMockGitStatus = (fileName: string): 'M' | 'A' | 'U' | null => {
-    if (fileName === 'index.html') return 'M';
-    if (fileName === 'script.js') return 'U';
-    if (fileName === 'styles.css') return 'A';
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Get file change status from pending agent changes
+  const getFileChangeStatus = (fileName: string): 'M' | 'A' | 'D' | null => {
+    if (!pendingFileChanges) return null;
+    const change = pendingFileChanges.find(c => c.path === fileName);
+    if (!change) return null;
+    if (change.action === 'create') return 'A';
+    if (change.action === 'modify') return 'M';
+    if (change.action === 'delete') return 'D';
     return null;
   };
 
@@ -42,7 +49,14 @@ export function FileExplorer() {
       name: fileName,
       type: 'file' as const,
       icon: fileName.endsWith('.html') ? '🌐' : fileName.endsWith('.css') ? '🎨' : '⚡',
-      gitStatus: getMockGitStatus(fileName)
+      gitStatus: getFileChangeStatus(fileName)
+    })),
+    // Also show files that are about to be created (in pendingFileChanges but not yet in files)
+    ...(pendingFileChanges || []).filter(c => c.action === 'create' && !files[c.path]).map(c => ({
+      name: c.path,
+      type: 'file' as const,
+      icon: c.path.endsWith('.html') ? '🌐' : c.path.endsWith('.css') ? '🎨' : '⚡',
+      gitStatus: 'A' as const
     }))
   ];
 
@@ -119,7 +133,7 @@ export function FileExplorer() {
     return nodes.map((node) => {
       const isFolder = node.type === 'folder';
       const isActive = node.name === activeFile;
-      
+
       const fileMarkers = markers[node.name] || [];
       const hasErrors = fileMarkers.some(m => m.severity === 8);
       const hasWarnings = fileMarkers.some(m => m.severity === 4);
@@ -142,30 +156,31 @@ export function FileExplorer() {
                 {/* Placeholder for alignment if no chevron */}
               </span>
             )}
-            
+
             {isFolder ? (
               <Folder size={14} className="text-blue-400 shrink-0" />
             ) : (
               <span className={cn(
                 "text-xs font-mono shrink-0",
                 node.name.endsWith('.ts') || node.name.endsWith('.tsx') || node.name.endsWith('.js') ? "text-blue-400" :
-                node.name.endsWith('.json') ? "text-yellow-400" :
-                node.name.endsWith('.css') ? "text-pink-400" :
-                node.name.endsWith('.html') ? "text-orange-400" : "text-white/50"
+                  node.name.endsWith('.json') ? "text-yellow-400" :
+                    node.name.endsWith('.css') ? "text-pink-400" :
+                      node.name.endsWith('.html') ? "text-orange-400" : "text-white/50"
               )}>
                 {node.icon || '≡'}
               </span>
             )}
-            
+
             <span className={cn(
               "truncate flex-1",
               node.gitStatus === 'M' ? "text-blue-300" :
-              node.gitStatus === 'A' ? "text-emerald-300" :
-              node.gitStatus === 'U' ? "text-emerald-400" : ""
+                node.gitStatus === 'A' ? "text-emerald-300" :
+                  node.gitStatus === 'D' ? "text-red-400 line-through opacity-60" :
+                    node.gitStatus === 'U' ? "text-emerald-400" : ""
             )}>
               {node.name}
             </span>
-            
+
             {/* Error/Warning Indicators */}
             {!isFolder && (hasErrors || hasWarnings) && (
               <span className="shrink-0 mr-1 opacity-70 group-hover:opacity-100 transition-opacity">
@@ -177,13 +192,14 @@ export function FileExplorer() {
               </span>
             )}
 
-            {/* Git Status Indicator */}
+            {/* File Change Status Indicator */}
             {!isFolder && node.gitStatus && (
               <span className={cn(
-                "shrink-0 text-[10px] font-mono font-bold ml-1 opacity-70",
+                "shrink-0 text-[10px] font-mono font-bold ml-1",
                 node.gitStatus === 'M' ? "text-blue-400" :
-                node.gitStatus === 'A' ? "text-emerald-400" :
-                node.gitStatus === 'U' ? "text-emerald-500" : ""
+                  node.gitStatus === 'A' ? "text-emerald-400" :
+                    node.gitStatus === 'D' ? "text-red-400" :
+                      node.gitStatus === 'U' ? "text-emerald-500" : ""
               )}>
                 {node.gitStatus}
               </span>
@@ -191,7 +207,7 @@ export function FileExplorer() {
 
             {/* Delete Button */}
             {!isFolder && (
-              <button 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   if (confirm(`Are you sure you want to delete ${node.name}?`)) {
@@ -225,18 +241,46 @@ export function FileExplorer() {
           <button onClick={handleNewFolder} className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded" title="New Folder">
             <FolderPlus size={14} />
           </button>
-          <button className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded">
+          <button
+            onClick={() => { setIsSearching(!isSearching); setSearchQuery(''); }}
+            className={cn("p-1 text-white/50 hover:text-white hover:bg-white/10 rounded", isSearching && "text-indigo-400 bg-white/10")}
+            title={language === 'vi' ? 'Tìm kiếm' : 'Search'}
+          >
             <Search size={14} />
           </button>
-          <button className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded">
+          <button
+            onClick={() => setFileExplorerOpen(false)}
+            className="p-1 text-white/50 hover:text-white hover:bg-white/10 rounded"
+            title={language === 'vi' ? 'Đóng Explorer' : 'Close Explorer'}
+          >
             <X size={14} />
           </button>
         </div>
       </div>
 
+      {/* Search Bar */}
+      {isSearching && (
+        <div className="px-2 py-1.5 border-b border-white/5">
+          <input
+            ref={searchInputRef}
+            autoFocus
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') { setIsSearching(false); setSearchQuery(''); } }}
+            placeholder={language === 'vi' ? 'Tìm file...' : 'Search files...'}
+            className="w-full px-2.5 py-1.5 bg-white/5 border border-white/10 rounded-md text-xs text-white placeholder:text-white/30 outline-none focus:border-indigo-500/40 transition-colors"
+          />
+        </div>
+      )}
+
       {/* File Tree */}
       <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
-        {renderTree(fileTree)}
+        {renderTree(
+          searchQuery
+            ? fileTree.filter(n => n.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            : fileTree
+        )}
         {isCreatingFile && (
           <div className="flex items-center gap-1.5 py-1 px-2 text-sm" style={{ paddingLeft: '20px' }}>
             <span className="w-3.5 flex items-center justify-center shrink-0 opacity-50 text-[10px]"></span>
