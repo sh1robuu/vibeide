@@ -74,7 +74,8 @@ export function AuthPage() {
         // New signup without onboarding — send to walkthrough
         navigate('/onboarding');
       } else {
-        navigate('/editor');
+        // Default: go to dashboard
+        navigate('/dashboard');
       }
     } catch (err: any) {
       console.error(err);

@@ -23,6 +23,13 @@ export function LandingPage() {
     { id: 'GPT-OSS 120B', isNew: true, provider: 'Ollama' },
   ];
 
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % t.words.length);
