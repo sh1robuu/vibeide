@@ -70,19 +70,17 @@ export function ProfilePage() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.9 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-medium min-w-[300px] ${
-                toast.type === 'success' 
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl text-sm font-medium min-w-[300px] ${toast.type === 'success'
                   ? "bg-[#1e1e1e] border-emerald-500/30 text-emerald-400 shadow-[0_10px_40px_rgba(16,185,129,0.2)]"
                   : "bg-[#1e1e1e] border-red-500/30 text-red-400 shadow-[0_10px_40px_rgba(239,68,68,0.2)]"
-              }`}
+                }`}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                toast.type === 'success' ? "bg-emerald-500/10" : "bg-red-500/10"
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? "bg-emerald-500/10" : "bg-red-500/10"
+                }`}>
                 {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
               </div>
               <p className="flex-1">{toast.message}</p>
-              <button 
+              <button
                 onClick={() => setToast(null)}
                 className="p-1.5 hover:bg-white/5 rounded-md transition-colors shrink-0"
               >
@@ -94,12 +92,12 @@ export function ProfilePage() {
       </div>
 
       <div className="max-w-2xl mx-auto">
-        <button 
-          onClick={() => navigate('/editor')}
+        <button
+          onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-white/50 hover:text-white transition-colors mb-8"
         >
           <ArrowLeft size={16} />
-          {language === 'en' ? 'Back to Editor' : 'Quay lại Editor'}
+          {language === 'en' ? 'Go Back' : 'Quay lại'}
         </button>
 
         <motion.div

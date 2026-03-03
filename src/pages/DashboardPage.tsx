@@ -24,7 +24,7 @@ export function DashboardPage() {
     const navigate = useNavigate();
     const {
         language, setLanguage, user, isAuthenticated,
-        setIsAuthenticated, setUser, projectName
+        setIsAuthenticated, setUser, projectName, files
     } = useStore();
     const isVi = language === 'vi';
 
@@ -111,11 +111,17 @@ export function DashboardPage() {
         { icon: <Gamepad2 size={20} />, title: isVi ? 'Mini Game' : 'Mini Game', color: 'from-purple-500 to-indigo-500', id: 'game' },
     ];
 
+    // Stable stats (computed once on mount, not on every render)
+    const [stableStats] = useState(() => ({
+        codingHours: Math.floor(Math.random() * 20 + 1),
+        aiPrompts: Math.floor(Math.random() * 30 + 3),
+    }));
+
     const stats = [
         { label: isVi ? 'Dự án' : 'Projects', value: savedProjects.length, icon: <FolderOpen size={16} />, color: 'text-blue-400' },
-        { label: isVi ? 'Giờ coding' : 'Coding Hours', value: Math.floor(Math.random() * 20 + 1), icon: <Clock size={16} />, color: 'text-emerald-400' },
-        { label: isVi ? 'File đã tạo' : 'Files Created', value: Math.floor(Math.random() * 50 + 5), icon: <Code2 size={16} />, color: 'text-purple-400' },
-        { label: isVi ? 'AI Prompts' : 'AI Prompts', value: Math.floor(Math.random() * 30 + 3), icon: <Sparkles size={16} />, color: 'text-amber-400' },
+        { label: isVi ? 'Giờ coding' : 'Coding Hours', value: stableStats.codingHours, icon: <Clock size={16} />, color: 'text-emerald-400' },
+        { label: isVi ? 'File đã tạo' : 'Files Created', value: Object.keys(files).length, icon: <Code2 size={16} />, color: 'text-purple-400' },
+        { label: isVi ? 'AI Prompts' : 'AI Prompts', value: stableStats.aiPrompts, icon: <Sparkles size={16} />, color: 'text-amber-400' },
     ];
 
     const tips = isVi ? [
